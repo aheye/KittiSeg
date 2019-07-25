@@ -50,6 +50,7 @@ def training(hypes, loss, global_step, learning_rate, opt=None):
     Returns:
       train_op: The Op for training.
     """
+
     # Add a scalar summary for the snapshot loss.''
     sol = hypes["solver"]
     hypes['tensors'] = {}
@@ -72,15 +73,16 @@ def training(hypes, loss, global_step, learning_rate, opt=None):
             else:
                 raise ValueError('Unrecognized opt type')
 
+        if hypes['dist']:
+            opt = cdl.DistributedOptimizer(opt)
         hypes['opt'] = opt
 
         grads_and_vars = opt.compute_gradients(total_loss)
-
         if hypes['clip_norm'] > 0:
             grads, tvars = zip(*grads_and_vars)
             clip_norm = hypes["clip_norm"]
             clipped_grads, norm = tf.clip_by_global_norm(grads, clip_norm)
-            grads_and_vars = zip(clipped_grads, tvars)
+            grads_and_vars = list(zip(clipped_grads, tvars))
 
         train_op = opt.apply_gradients(grads_and_vars, global_step=global_step)
 

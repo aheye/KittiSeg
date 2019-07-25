@@ -13,7 +13,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
 
 import commentjson
 import logging
@@ -21,6 +20,14 @@ import os
 import sys
 
 import collections
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+import dl_comm.tensorflow as cdl
+os.environ["CUDA_VISIBLE_DEVICES"] = str(cdl.local_rank())
+import tensorflow as tf
 
 
 def dict_merge(dct, merge_dct):
@@ -74,6 +81,18 @@ flags.DEFINE_string('hypes', None,
 flags.DEFINE_string('mod', None,
                     'Modifier for model parameters.')
 
+flags.DEFINE_boolean('dist', False,
+                     'Run distributed using the cray plugin')
+
+flags.DEFINE_integer('layers', None,
+                     'Number of layers in the network')
+
+flags.DEFINE_integer('optimizer', None,
+                     'The optimizer to use for training')
+
+flags.DEFINE_float('lr', None,
+                   "Learning Rate")
+
 if 'TV_SAVE' in os.environ and os.environ['TV_SAVE']:
     tf.app.flags.DEFINE_boolean(
         'save', True, ('Whether to save the run. In case --nosave (default) '
@@ -106,6 +125,13 @@ def main(_):
     with open(tf.app.flags.FLAGS.hypes, 'r') as f:
         logging.info("f: %s", f)
         hypes = commentjson.load(f)
+        hypes['dist'] = FLAGS.dist
+        if FLAGS.layers:
+            hypes['arch']['layers'] = FLAGS.layers
+        if FLAGS.lr:
+            hypes['solver']['learning_rate'] = FLAGS.lr
+        if FLAGS.optimizer:
+            hypes['solver']['opt'] = FLAGS.optimizer
     utils.load_plugins()
 
     if tf.app.flags.FLAGS.mod is not None:
@@ -123,7 +149,6 @@ def main(_):
     train.maybe_download_and_extract(hypes)
     logging.info("Initialize training folder")
     train.initialize_training_folder(hypes)
-    logging.info("Start training")
     train.do_training(hypes)
 
 

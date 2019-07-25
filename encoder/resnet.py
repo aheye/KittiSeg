@@ -57,7 +57,7 @@ def inference(hypes, images, train=True,
     elif layers == 152:
         num_blocks = [3, 8, 36, 3]
     else:
-        assert()
+        raise ValueError("Number of layers must be in {50,101,152}") 
 
     if preprocess:
         x = _imagenet_preprocess(images)
